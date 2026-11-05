@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Lab Maya IPAS: Sistem Gerak Manusia</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #1e293b; /* Dark backdrop for letterboxing */
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Fredoka', sans-serif; /* Friendly rounded font */
+            touch-action: none; /* Prevent browser scrolling on touch */
+        }
+
+        /* Fixed 16:9 Game Stage. JS will scale this using CSS transform */
+        #game-stage {
+            width: 1280px;
+            height: 720px;
+            position: absolute;
+            background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            transform-origin: center center;
+            overflow: hidden;
+        }
+
+        /* Cute dot pattern background */
+        .bg-pattern {
+            position: absolute;
+            inset: 0;
+            background-image: radial-gradient(#38bdf8 3px, transparent 3px);
+            background-size: 40px 40px;
+            opacity: 0.2;
+            pointer-events: none;
+        }
+
+        /* Animations */
+        @keyframes bounceIn {
+            0% { transform: scale(0.5); opacity: 0; }
+            60% { transform: scale(1.05); opacity: 1; }
+            80% { transform: scale(0.95); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-bounce-in {
+            animation: bounceIn 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        .animate-fade-in {
+            animation: fadeIn 0.4s ease-out forwards;
+        }
+
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+        .animate-float {
+            animation: float 3s ease-in-out infinite;
+        }
+
+        .hotspot-pulse::before {
+            content: '';
+            position: absolute;
+            inset: -4px;
+            border-radius: 50%;
+            background-color: inherit;
+            opacity: 0.6;
+            animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
+        }
+        @keyframes ping {
+            75%, 100% { transform: scale(2); opacity: 0; }
+        }
+
+        /* SVG body styling */
+        .body-part {
+            stroke: #ffffff;
+            stroke-width: 24;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            transition: stroke 0.3s ease;
+        }
+        .body-part.highlight {
+            stroke: #fbbf24; /* Amber highlight */
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Main Game Container (1280x720) -->
+    <div id="game-stage">
+        <div class="bg-pattern"></div>
+
+        <!-- ==================== SCENE 1: INTRO ==================== -->
+        <div id="scene-intro" class="absolute inset-0 flex flex-col items-center justify-center animate-fade-in">
+            <div class="bg-white/80 backdrop-blur-md p-10 rounded-3xl shadow-2xl border-4 border-white text-center max-w-2xl animate-bounce-in">
+                <div class="text-6xl mb-4 animate-float">🦴💪🏃</div>
+                <h1 class="text-5xl font-bold text-sky-600 mb-2">Lab Maya IPAS</h1>
+                <h2 class="text-3xl font-semibold text-slate-700 mb-8">Sistem Gerak Manusia</h2>
+                <p class="text-xl text-slate-600 mb-8">Halo! Yuk kita jelajahi tulang, otot, dan sendi yang membuat tubuh kita bisa bergerak. Siap?</p>
+                <button onclick="startGame()" class="bg-gradient-to-r from-green-400 to-emerald-500 hover:from-green-500 hover:to-emerald-600 text-white text-3xl font-bold py-4 px-12 rounded-full shadow-lg transform hover:scale-105 transition-all border-4 border-white">
+                    Mulai Belajar! 🚀
+                </button>
+            </div>
+        </div>
+
+        <!-- ==================== SCENE 2: MENU ==================== -->
+        <div id="scene-menu" class="absolute inset-0 flex flex-col items-center justify-center hidden">
+            <h2 class="text-4xl font-bold text-sky-700 mb-8 bg-white/70 px-8 py-3 rounded-full shadow-sm border-2 border-sky-100">Pilih Materi yang Ingin Dipelajari</h2>
+            
+            <div class="grid grid-cols-2 gap-8 w-3/4 max-w-4xl">
+                <!-- Menu Buttons -->
+                <button onclick="openLab('tengkorak')" class="group relative bg-white rounded-3xl p-8 shadow-xl hover:shadow-2xl transform hover:-translate-y-2 transition-all border-b-8 border-purple-200">
+                    <div class="text-6xl mb-4 group-hover:animate-float">💀</div>
+                    <h3 class="text-3xl font-bold text-purple-600">Tulang Tengkorak</h3>
+                </button>
+
+                <button onclick="openLab('gerak')" class="group relative bg-white rounded-3xl p-8 shadow-xl hover:shadow-2xl transform hover:-translate-y-2 transition-all border-b-8 border-blue-200">
+                    <div class="text-6xl mb-4 group-hover:animate-float">🦵</div>
+                    <h3 class="text-3xl font-bold text-blue-600">Anggota Gerak</h3>
+                </button>
+
+                <button onclick="openLab('otot')" class="group relative bg-white rounded-3xl p-8 shadow-xl hover:shadow-2xl transform hover:-translate-y-2 transition-all border-b-8 border-red-200">
+                    <div class="text-6xl mb-4 group-hover:animate-float">💪</div>
+                    <h3 class="text-3xl font-bold text-red-500">Otot Manusia</h3>
+                </button>
+
+                <button onclick="openLab('sendi')" class="group relative bg-white rounded-3xl p-8 shadow-xl hover:shadow-2xl transform hover:-translate-y-2 transition-all border-b-8 border-amber-200">
+                    <div class="text-6xl mb-4 group-hover:animate-float">🦴</div>
+                    <h3 class="text-3xl font-bold text-amber-500">Macam Sendi</h3>
+                </button>
+            </div>
+        </div>
+
+        <!-- ==================== SCENE 3: LAB ==================== -->
+        <div id="scene-lab" class="absolute inset-0 flex hidden">
+            <!-- Left Side: Interactive Body (SVG) -->
+            <div class="w-1/2 h-full relative flex items-center justify-center p-10 bg-white/40 border-r-4 border-white/50">
+                <!-- Back Button -->
+                <button onclick="goBack()" class="absolute top-6 left-6 bg-white text-slate-700 hover:bg-sky-100 font-bold py-3 px-6 rounded-full shadow-md transition-colors flex items-center gap-2 z-10 text-xl border-2 border-slate-200">
+                    ⬅️ Kembali
+                </button>
+
+                <!-- SVG Human Skeleton / Body Outline -->
+                <div class="relative w-full max-w-[400px] h-full max-h-[600px]">
+                    <svg id="human-body" viewBox="0 0 200 400" xmlns="http://www.w3.org/2000/svg" class="w-full h-full drop-shadow-lg">
+                        <!-- Head base to cover overlap -->
+                        <circle cx="100" cy="50" r="26" fill="#cbd5e1" />
+                        
+                        <g class="fill-none">
+                            <!-- Limbs & Torso Lines -->
+                            <line x1="100" y1="50" x2="100" y2="90" class="body-part stroke-slate-300" stroke-width="20" id="part-leher" />
+                            <line x1="100" y1="90" x2="100" y2="200" class="body-part stroke-slate-300" stroke-width="50" id="part-badan" />
+                            
+                            <!-- Left Arm (viewer's left) -->
+                            <line x1="55" y1="100" x2="35" y2="160" class="body-part stroke-slate-300" stroke-width="20" id="part-lengan-kiri" />
+                            <line x1="35" y1="160" x2="25" y2="220" class="body-part stroke-slate-300" stroke-width="16" />
+                            
+                            <!-- Right Arm (viewer's right) -->
+                            <line x1="145" y1="100" x2="165" y2="160" class="body-part stroke-slate-300" stroke-width="20" id="part-lengan-kanan" />
+                            <line x1="165" y1="160" x2="175" y2="220" class="body-part stroke-slate-300" stroke-width="16" />
+                            
+                            <!-- Left Leg -->
+                            <line x1="85" y1="200" x2="85" y2="280" class="body-part stroke-slate-300" stroke-width="22" id="part-paha-kiri" />
+                            <line x1="85" y1="280" x2="85" y2="360" class="body-part stroke-slate-300" stroke-width="18" id="part-betis-kiri" />
+                            
+                            <!-- Right Leg -->
+                            <line x1="115" y1="200" x2="115" y2="280" class="body-part stroke-slate-300" stroke-width="22" id="part-paha-kanan" />
+                            <line x1="115" y1="280" x2="115" y2="360" class="body-part stroke-slate-300" stroke-width="18" id="part-betis-kanan" />
+                        </g>
+
+                        <!-- Head Border -->
+                        <circle cx="100" cy="50" r="26" class="body-part stroke-slate-300 fill-none" stroke-width="6" id="part-kepala" />
+                    </svg>
+
+                    <!-- Hotspots Container -->
+                    <div id="hotspot-container" class="absolute inset-0">
+                        <!-- Hotspots will be injected here by JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Side: Info Panel -->
+            <div class="w-1/2 h-full flex flex-col p-12 justify-center">
+                <div id="lab-header" class="bg-white rounded-3xl p-8 shadow-xl border-t-8 mb-6">
+                    <h2 id="lab-title" class="text-4xl font-bold mb-3">Judul</h2>
+                    <p id="lab-desc" class="text-xl text-slate-600">Deskripsi instruksi...</p>
+                </div>
+
+                <div class="bg-white/80 backdrop-blur rounded-3xl p-8 shadow-lg border-2 border-white flex-1 overflow-y-auto">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-2xl font-bold text-slate-700">Daftar Temuan:</h3>
+                        <span id="lab-progress" class="bg-sky-100 text-sky-700 py-1 px-4 rounded-full font-bold text-xl">0/3</span>
+                    </div>
+                    
+                    <ul id="discovery-list" class="space-y-4">
+                        <!-- Discovered items injected here -->
+                        <li class="text-slate-400 italic text-xl text-center py-10" id="empty-state">
+                            Klik titik yang berkedip pada gambar untuk belajar!
+                        </li>
+                    </ul>
+
+                    <!-- Success Message -->
+                    <div id="success-msg" class="hidden mt-8 bg-green-100 border-2 border-green-400 text-green-700 p-6 rounded-2xl text-center animate-bounce-in">
+                        <h4 class="text-3xl font-bold mb-2">Hebat! 🌟</h4>
+                        <p class="text-xl">Kamu sudah menemukan semua bagian di materi ini!</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== MODAL POPUP ==================== -->
+        <div id="info-modal" class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+            <div class="bg-white w-[500px] rounded-3xl shadow-2xl overflow-hidden border-4 border-white transform transition-all scale-95" id="modal-box">
+                <div id="modal-header" class="p-6 text-center text-white">
+                    <h3 id="modal-title" class="text-3xl font-bold">Nama Bagian</h3>
+                </div>
+                <div class="p-8">
+                    <p id="modal-desc" class="text-2xl text-slate-700 leading-relaxed text-center"></p>
+                </div>
+                <div class="p-6 bg-slate-50 border-t-2 border-slate-100 flex justify-center">
+                    <button onclick="closeModal()" class="bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 px-10 rounded-full text-xl shadow-md transition-all transform hover:scale-105">
+                        Mengerti 👍
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ==================== LOGIC & DATA ==================== -->
+    <script>
+        // --- 1. Scaling Logic (Keep 16:9 aspect ratio and fit window) ---
+        function resizeStage() {
+            const stage = document.getElementById('game-stage');
+            const windowWidth = window.innerWidth;
+            const windowHeight = window.innerHeight;
+            const targetWidth = 1280;
+            const targetHeight = 720;
+
+            // Calculate scale to fit within viewport
+            const scaleX = windowWidth / targetWidth;
+            const scaleY = windowHeight / targetHeight;
+            const scale = Math.min(scaleX, scaleY);
+
+            // Apply transformation
+            stage.style.transform = `scale(${scale})`;
+        }
+        window.addEventListener('resize', resizeStage);
+        resizeStage(); // Initial call
+
+        // --- 2. Web Audio API Setup (Standalone Sound Effects) ---
+        let audioCtx = null;
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                // Play silent sound to unlock audio engine on first interaction
+                const osc = audioCtx.createOscillator();
+                osc.connect(audioCtx.destination);
+                osc.start(0);
+                osc.stop(0.001);
+            }
+        }
+
+        // Generic bloop sound
+        function playBloop() {
+            if (!audioCtx) return;
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            
+            osc.type = 'sine';
+            // Sweep frequency for a "pop/bloop" effect
+            osc.frequency.setValueAtTime(400, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(800, audioCtx.currentTime + 0.1);
+            
+            // Fast attack and decay volume envelope
+            gain.gain.setValueAtTime(0, audioCtx.currentTime);
+            gain.gain.linearRampToValueAtTime(0.5, audioCtx.currentTime + 0.02);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+            
+            osc.start(audioCtx.currentTime);
+            osc.stop(audioCtx.currentTime + 0.15);
+        }
+
+        // Success chord sound
+        function playSuccessSound() {
+            if (!audioCtx) return;
+            const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6 (C Major Arpeggio)
+            
+            notes.forEach((freq, i) => {
+                setTimeout(() => {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    
+                    osc.type = 'triangle';
+                    osc.frequency.value = freq;
+                    
+                    gain.gain.setValueAtTime(0, audioCtx.currentTime);
+                    gain.gain.linearRampToValueAtTime(0.3, audioCtx.currentTime + 0.05);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+                    
+                    osc.start(audioCtx.currentTime);
+                    osc.stop(audioCtx.currentTime + 0.5);
+                }, i * 100);
+            });
+        }
+
+        // --- 3. Educational Data ---
+        // Coordinates (x, y) are percentages based on the 200x400 SVG viewBox
+        const labData = {
+            tengkorak: {
+                title: "Tulang Tengkorak 💀",
+                desc: "Tengkorak melindungi organ paling penting kita, yaitu otak. Ayo cari tulang-tulang pembentuknya!",
+                themeClass: "border-purple-500 text-purple-700",
+                bgClass: "bg-purple-500",
+                svgColor: "#c084fc", // tailwind purple-400
+                items: [
+                    { id: "dahi", label: "Tulang Dahi", desc: "Berada di kepala bagian depan. Fungsinya melindungi lobus frontal otak kita.", x: 50, y: 7, svgTarget: "part-kepala" },
+                    { id: "pipi", label: "Tulang Pipi", desc: "Tulang yang menonjol di bawah mata. Fungsinya membentuk struktur wajah.", x: 40, y: 13, svgTarget: "part-kepala" },
+                    { id: "rahang", label: "Rahang Bawah", desc: "Ini sangat spesial! Satu-satunya tulang tengkorak yang bisa bergerak bebas agar kita bisa mengunyah dan bicara.", x: 50, y: 18, svgTarget: "part-kepala" }
+                ]
+            },
+            gerak: {
+                title: "Anggota Gerak 🦵",
+                desc: "Tulang anggota gerak membantu kita berjalan, berlari, dan mengangkat barang.",
+                themeClass: "border-blue-500 text-blue-700",
+                bgClass: "bg-blue-500",
+                svgColor: "#60a5fa", // tailwind blue-400
+                items: [
+                    { id: "lengan", label: "Tulang Lengan Atas", desc: "Tulang panjang di lengan atas, tempat menempelnya otot bisep.", x: 22.5, y: 32.5, svgTarget: "part-lengan-kiri" },
+                    { id: "paha", label: "Tulang Paha", desc: "Luar biasa! Ini adalah tulang terbesar, terpanjang, dan terkuat di tubuh manusia.", x: 57.5, y: 60, svgTarget: "part-paha-kanan" },
+                    { id: "kering", label: "Tulang Kering", desc: "Berada di betis bagian depan. Menopang sebagian besar berat tubuhmu saat berdiri.", x: 57.5, y: 80, svgTarget: "part-betis-kanan" }
+                ]
+            },
+            otot: {
+                title: "Otot Manusia 💪",
+                desc: "Tanpa otot, tulang kita tidak bisa bergerak. Otot adalah alat gerak aktif!",
+                themeClass: "border-red-500 text-red-700",
+                bgClass: "bg-red-500",
+                svgColor: "#f87171", // tailwind red-400
+                items: [
+                    { id: "lurik", label: "Otot Lurik (Rangka)", desc: "Menempel pada tulang. Kita bisa mengendalikannya secara sadar untuk berlari atau mengambil barang.", x: 77.5, y: 32.5, svgTarget: "part-lengan-kanan" },
+                    { id: "jantung", label: "Otot Jantung", desc: "Hanya ada di jantung! Bekerja terus-menerus memompa darah tanpa kenal lelah, di luar kesadaran kita.", x: 55, y: 30, svgTarget: "part-badan" },
+                    { id: "polos", label: "Otot Polos", desc: "Terdapat di organ dalam (seperti lambung dan usus). Bekerja otomatis mencerna makanan saat kita tidur.", x: 50, y: 42.5, svgTarget: "part-badan" }
+                ]
+            },
+            sendi: {
+                title: "Macam-Macam Sendi 🦴",
+                desc: "Sendi adalah tempat bertemunya dua tulang yang memungkinkan terjadinya gerakan.",
+                themeClass: "border-amber-500 text-amber-700",
+                bgClass: "bg-amber-500",
+                svgColor: "#fbbf24", // tailwind amber-400
+                items: [
+                    { id: "putar", label: "Sendi Putar", desc: "Memungkinkan tulang yang satu berputar mengelilingi tulang lain. Contohnya di leher, membuatmu bisa menengok.", x: 50, y: 17.5, svgTarget: "part-leher" },
+                    { id: "peluru", label: "Sendi Peluru", desc: "Memungkinkan gerakan bebas ke segala arah! Ada di pangkal paha dan bahumu.", x: 30, y: 25, svgTarget: "part-lengan-kiri" },
+                    { id: "engsel", label: "Sendi Engsel", desc: "Gerakannya hanya satu arah, seperti engsel pintu. Terdapat di siku lengan dan lutut kakimu.", x: 17.5, y: 40, svgTarget: "part-lengan-kiri" }
+                ]
+            }
+        };
+
+        // --- 4. Game State & Logic ---
+        let currentCategory = null;
+        let discoveredItems = [];
+
+        function showScene(sceneId) {
+            document.getElementById('scene-intro').classList.add('hidden');
+            document.getElementById('scene-menu').classList.add('hidden');
+            document.getElementById('scene-lab').classList.add('hidden');
+            
+            const scene = document.getElementById(sceneId);
+            scene.classList.remove('hidden');
+            scene.classList.add('animate-fade-in');
+        }
+
+        function startGame() {
+            initAudio(); // Unlock audio
+            playBloop();
+            showScene('scene-menu');
+        }
+
+        function goBack() {
+            playBloop();
+            showScene('scene-menu');
+        }
+
+        function resetBodyColors(color) {
+            const parts = document.querySelectorAll('.body-part');
+            parts.forEach(part => {
+                part.style.stroke = color;
+            });
+        }
+
+        function openLab(categoryId) {
+            playBloop();
+            currentCategory = categoryId;
+            discoveredItems = [];
+            const data = labData[categoryId];
+
+            // Update Header
+            document.getElementById('lab-title').innerText = data.title;
+            document.getElementById('lab-desc').innerText = data.desc;
+            document.getElementById('lab-header').className = `bg-white rounded-3xl p-8 shadow-xl border-t-8 mb-6 ${data.themeClass}`;
+            
+            // Update SVG Body Color
+            resetBodyColors(data.svgColor);
+
+            // Reset Discovery Panel
+            document.getElementById('empty-state').style.display = 'block';
+            document.getElementById('success-msg').classList.add('hidden');
+            const list = document.getElementById('discovery-list');
+            // Remove existing dynamic LIs
+            Array.from(list.children).forEach(child => {
+                if(child.id !== 'empty-state') child.remove();
+            });
+            updateProgress();
+
+            // Render Hotspots
+            renderHotspots(data);
+
+            showScene('scene-lab');
+        }
+
+        function renderHotspots(data) {
+            const container = document.getElementById('hotspot-container');
+            container.innerHTML = ''; // clear old
+
+            data.items.forEach((item, index) => {
+                const dot = document.createElement('div');
+                dot.id = `hotspot-${item.id}`;
+                dot.className = `absolute cursor-pointer transform -translate-x-1/2 -translate-y-1/2 flex items-center justify-center group z-20`;
+                dot.style.left = `${item.x}%`;
+                dot.style.top = `${item.y}%`;
+                dot.style.width = '3rem';
+                dot.style.height = '3rem';
+
+                dot.innerHTML = `
+                    <div class="absolute inset-0 rounded-full ${data.bgClass} hotspot-pulse"></div>
+                    <div class="absolute inset-2 bg-white rounded-full border-4 border-transparent flex items-center justify-center transition-transform transform group-hover:scale-110 shadow-lg">
+                        <div class="w-3 h-3 rounded-full ${data.bgClass}"></div>
+                    </div>
+                `;
+
+                dot.onclick = () => handleHotspotClick(item, data);
+                container.appendChild(dot);
+            });
+        }
+
+        function handleHotspotClick(item, data) {
+            playBloop();
+
+            // Highlight SVG part temporarily
+            if(item.svgTarget) {
+                const svgEl = document.getElementById(item.svgTarget);
+                if(svgEl) {
+                    const originalColor = svgEl.style.stroke;
+                    svgEl.style.stroke = '#fbbf24'; // Highlight color
+                    setTimeout(() => { svgEl.style.stroke = originalColor; }, 1000);
+                }
+            }
+
+            // Populate & Show Modal
+            document.getElementById('modal-title').innerText = item.label;
+            document.getElementById('modal-desc').innerText = item.desc;
+            document.getElementById('modal-header').className = `p-6 text-center text-white ${data.bgClass}`;
+            
+            const modal = document.getElementById('info-modal');
+            const modalBox = document.getElementById('modal-box');
+            modal.classList.remove('hidden');
+            modalBox.classList.add('animate-bounce-in');
+
+            // Logic to mark as discovered
+            if (!discoveredItems.includes(item.id)) {
+                discoveredItems.push(item.id);
+                addToList(item, data);
+                
+                // Remove hotspot visually
+                const hotspot = document.getElementById(`hotspot-${item.id}`);
+                if(hotspot) {
+                    hotspot.style.opacity = '0';
+                    hotspot.style.pointerEvents = 'none';
+                    setTimeout(() => hotspot.remove(), 300);
+                }
+
+                updateProgress();
+
+                // Check win condition
+                if (discoveredItems.length === data.items.length) {
+                    setTimeout(() => {
+                        document.getElementById('success-msg').classList.remove('hidden');
+                        playSuccessSound();
+                    }, 500); // slight delay after modal closes
+                }
+            }
+        }
+
+        function addToList(item, data) {
+            document.getElementById('empty-state').style.display = 'none';
+            const list = document.getElementById('discovery-list');
+            
+            const li = document.createElement('li');
+            li.className = `bg-slate-50 border-l-4 ${data.themeClass.split(' ')[0]} p-4 rounded-r-xl shadow-sm animate-fade-in`;
+            li.innerHTML = `
+                <strong class="text-xl block mb-1">${item.label} <span class="text-green-500">✓</span></strong>
+                <span class="text-slate-600 text-lg">${item.desc}</span>
+            `;
+            list.appendChild(li);
+        }
+
+        function updateProgress() {
+            if(!currentCategory) return;
+            const total = labData[currentCategory].items.length;
+            const current = discoveredItems.length;
+            document.getElementById('lab-progress').innerText = `${current}/${total}`;
+        }
+
+        function closeModal() {
+            playBloop();
+            const modalBox = document.getElementById('modal-box');
+            modalBox.classList.remove('animate-bounce-in');
+            document.getElementById('info-modal').classList.add('hidden');
+        }
+
+    </script>
+</body>
+</html>
